@@ -1,0 +1,2 @@
+"""embedding-api application package."""
+
