@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.config import Settings
@@ -10,9 +11,10 @@ from app.schemas import InputType, ModelInfo
 class SentenceTransformerBackend:
     """SentenceTransformers implementation used for production inference."""
 
-    def __init__(self, settings: Settings, configured_info: ModelInfo) -> None:
+    def __init__(self, settings: Settings, configured_info: ModelInfo, device: str) -> None:
         self._settings = settings
         self._configured_info = configured_info
+        self._device = device
         self._model: Any | None = None
         self._tokenizer: Any | None = None
         self._max_input_tokens = settings.max_length
@@ -26,7 +28,7 @@ class SentenceTransformerBackend:
             self._model = SentenceTransformer(
                 self._settings.model,
                 cache_folder=str(self._settings.model_cache_dir),
-                device=self._settings.device,
+                device=self._device,
             )
         except Exception as error:
             raise APIError("MODEL_LOAD_FAILED", "Model failed to load", 503) from error
@@ -62,6 +64,15 @@ class SentenceTransformerBackend:
         lengths = self._token_lengths(texts)
         if not truncate and any(length > self._max_input_tokens for length in lengths):
             raise APIError("INPUT_TOO_LONG", "Input exceeds the model token limit", 400)
+        if truncate and any(length > self._max_input_tokens for length in lengths):
+            logging.getLogger("embedding_api").warning(
+                "input_truncated",
+                extra={
+                    "model": self._settings.model,
+                    "input_count": len(texts),
+                    "device": self._device,
+                },
+            )
         try:
             embeddings = self._model.encode(
                 texts,
@@ -77,11 +88,10 @@ class SentenceTransformerBackend:
     def count_tokens(self, texts: list[str]) -> int | None:
         if self._tokenizer is None:
             return None
-        return sum(self._token_lengths(texts))
+        return sum(min(length, self._max_input_tokens) for length in self._token_lengths(texts))
 
     def _token_lengths(self, texts: list[str]) -> list[int]:
         if self._tokenizer is None:
             return []
         encoded = self._tokenizer(texts, add_special_tokens=True, truncation=False)
         return [len(token_ids) for token_ids in encoded["input_ids"]]
-

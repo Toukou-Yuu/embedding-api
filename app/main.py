@@ -21,25 +21,25 @@ from app.utils.logging import configure_logging
 from app.utils.timing import elapsed_ms, now
 
 
-def build_backend(settings: Settings, registry: ModelRegistry):
+def build_backend(settings: Settings, registry: ModelRegistry, resolved_device: str):
     if settings.backend == "fake":
         return FakeBackend(registry.default())
     from app.backends.sentence_transformer_backend import SentenceTransformerBackend
 
-    return SentenceTransformerBackend(settings, registry.default())
+    return SentenceTransformerBackend(settings, registry.default(), resolved_device)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     runtime_settings = settings or Settings()
     logger = configure_logging(runtime_settings.log_level)
     registry = ModelRegistry(runtime_settings)
-    backend = build_backend(runtime_settings, registry)
-    service = EmbeddingService(backend, registry, runtime_settings)
     resolved_device = (
         "fake"
         if runtime_settings.backend == "fake"
         else resolve_device(runtime_settings.device)
     )
+    backend = build_backend(runtime_settings, registry, resolved_device)
+    service = EmbeddingService(backend, registry, runtime_settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -70,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if _requires_authentication(request, runtime_settings):
                 authorization = request.headers.get("Authorization", "")
                 if not compare_digest(authorization, f"Bearer {runtime_settings.api_key}"):
+                    request.state.error_code = "UNAUTHORIZED"
                     response = JSONResponse(
                         status_code=401,
                         content={
@@ -106,6 +107,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "method": request.method,
                 "status_code": response.status_code,
                 "latency_ms": elapsed_ms(started),
+                "model": getattr(request.state, "model", None),
+                "input_count": getattr(request.state, "input_count", None),
+                "device": resolved_device,
+                "error_code": getattr(request.state, "error_code", None),
             },
         )
         return response
@@ -137,7 +142,8 @@ def _requires_authentication(request: Request, settings: Settings) -> bool:
     return True
 
 
-async def request_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+async def request_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    request.state.error_code = "INVALID_REQUEST"
     return JSONResponse(
         status_code=400,
         content={

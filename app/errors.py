@@ -30,7 +30,8 @@ class ModelNotFoundError(APIError):
         )
 
 
-async def api_error_handler(_: Request, exc: APIError) -> JSONResponse:
+async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
+    request.state.error_code = exc.code
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -41,4 +42,3 @@ async def api_error_handler(_: Request, exc: APIError) -> JSONResponse:
             }
         },
     )
-

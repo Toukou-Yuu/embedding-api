@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import math
 
+from app.errors import APIError
 from app.schemas import InputType, ModelInfo
 
 
@@ -29,13 +30,22 @@ class FakeBackend:
         normalize: bool,
         truncate: bool,
     ) -> list[list[float]]:
-        del input_type, truncate
+        del input_type
         if not self._loaded:
             raise RuntimeError("Fake backend has not been loaded")
-        return [self._vector_for_text(text, normalize) for text in texts]
+        max_tokens = self._model_info.max_input_tokens
+        if max_tokens is not None and not truncate:
+            if any(len(text.split()) > max_tokens for text in texts):
+                raise APIError("INPUT_TOO_LONG", "Input exceeds the model token limit", 400)
+        return [
+            self._vector_for_text(self._truncate(text, max_tokens), normalize) for text in texts
+        ]
 
     def count_tokens(self, texts: list[str]) -> int:
-        return sum(len(text.split()) for text in texts)
+        max_tokens = self._model_info.max_input_tokens
+        if max_tokens is None:
+            return sum(len(text.split()) for text in texts)
+        return sum(min(len(text.split()), max_tokens) for text in texts)
 
     def _vector_for_text(self, text: str, normalize: bool) -> list[float]:
         values: list[float] = []
@@ -50,3 +60,8 @@ class FakeBackend:
         magnitude = math.sqrt(sum(value * value for value in vector))
         return [value / magnitude for value in vector]
 
+    @staticmethod
+    def _truncate(text: str, max_tokens: int | None) -> str:
+        if max_tokens is None:
+            return text
+        return " ".join(text.split()[:max_tokens])

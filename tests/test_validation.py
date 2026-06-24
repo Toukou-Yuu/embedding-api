@@ -30,11 +30,41 @@ def test_input_too_long_is_rejected(app_factory) -> None:
     assert response.json()["error"]["code"] == "INPUT_TOO_LONG"
 
 
+def test_token_limit_respects_truncate(app_factory) -> None:
+    with TestClient(app_factory(max_length=1)) as client:
+        rejected = client.post(
+            "/v1/embeddings",
+            json={"input": "one two", "truncate": False},
+        )
+        truncated = client.post(
+            "/v1/embeddings",
+            json={"input": "one two", "truncate": True},
+        )
+
+    assert rejected.status_code == 400
+    assert rejected.json()["error"]["code"] == "INPUT_TOO_LONG"
+    assert truncated.status_code == 200
+
+
 def test_invalid_input_type_uses_standard_error_envelope(client: TestClient) -> None:
     response = client.post("/v1/embeddings", json={"input": "text", "input_type": "invalid"})
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_non_string_input_is_rejected(client: TestClient) -> None:
+    response = client.post("/v1/embeddings", json={"input": ["valid", 1]})
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_unknown_model_is_rejected(client: TestClient) -> None:
+    response = client.post("/v1/embeddings", json={"model": "missing/model", "input": "text"})
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "MODEL_NOT_FOUND"
 
 
 def test_api_key_protects_v1_interfaces_except_health(app_factory) -> None:
