@@ -76,12 +76,12 @@ RUN_REAL_MODEL_TESTS=1 pytest tests/test_real_model.py
 Build and run on a Linux host:
 
 ```bash
-docker build -f docker/Dockerfile -t toukouyuu/embedding-api:latest .
+docker build -f docker/Dockerfile -t "$DOCKERHUB_USERNAME/embedding-api:latest" .
 docker run --rm -p 8100:8100 \
   -v embedding-models:/models \
   -e EMBEDDING_HOST=0.0.0.0 \
   -e EMBEDDING_MODEL_CACHE_DIR=/models \
-  toukouyuu/embedding-api:latest
+  "$DOCKERHUB_USERNAME/embedding-api:latest"
 ```
 
 The image never includes model weights. The first successful runtime load stores weights in the mounted `/models` volume. See [docs/deployment.md](docs/deployment.md).
