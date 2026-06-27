@@ -97,6 +97,8 @@ docker run --rm -p 8100:8100 \
 
 The image never includes model weights. The first successful runtime load stores weights in the mounted `/models` volume. See [docs/deployment.md](docs/deployment.md).
 
+For Docker Compose and Watchtower-based local auto-update examples, see [docs/local-docker-deployment.md](docs/local-docker-deployment.md).
+
 For NVIDIA GPU deployment and preflight checks, see [docs/gpu-deployment.md](docs/gpu-deployment.md).
 
 ## Environment variables

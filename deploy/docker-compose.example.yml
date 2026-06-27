@@ -1,0 +1,36 @@
+services:
+  embedding-api:
+    image: ${EMBEDDING_IMAGE:-007hikari/embedding-api}:${EMBEDDING_IMAGE_TAG:-latest}
+    container_name: embedding-api
+    restart: unless-stopped
+    ports:
+      - "${EMBEDDING_HOST_PORT:-8100}:8100"
+    environment:
+      EMBEDDING_HOST: 0.0.0.0
+      EMBEDDING_PORT: 8100
+      EMBEDDING_MODEL_CACHE_DIR: /models
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-m3}
+      EMBEDDING_DEVICE: ${EMBEDDING_DEVICE:-auto}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-4}
+      EMBEDDING_PRELOAD: ${EMBEDDING_PRELOAD:-true}
+      EMBEDDING_REQUIRE_API_KEY: ${EMBEDDING_REQUIRE_API_KEY:-false}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+    volumes:
+      - embedding-models:/models
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/v1/health', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.scope: "agent-infra"
+
+volumes:
+  embedding-models:
+    name: ${EMBEDDING_MODEL_VOLUME:-embedding-models}

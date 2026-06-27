@@ -49,3 +49,6 @@ The Dockerfile never downloads BGE-M3 during image build. Model data is populate
 For NVIDIA GPU deployment, use `--gpus all` and see [gpu-deployment.md](gpu-deployment.md) for preflight checks and GPU-specific examples.
 
 The GitHub Actions publish workflow builds `$DOCKERHUB_USERNAME/embedding-api:latest` and `$DOCKERHUB_USERNAME/embedding-api:<git-sha>` when Docker Hub credentials are configured as `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+
+For Docker Compose and Watchtower-based local auto-update examples, see
+[local-docker-deployment.md](local-docker-deployment.md).
