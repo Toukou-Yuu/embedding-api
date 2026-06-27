@@ -18,6 +18,12 @@ Keep domain logic out of API handlers. Keep IO and model-backend concerns separa
 - Do not add an abstraction without at least two concrete use cases.
 - Keep diffs small and reviewable.
 
+## Commit Messages
+
+- Use the repository's scoped Chinese commit subject format: `type（scope）：summary`.
+- Example: `docs（delivery）：完善交付文档与部署自动化`.
+- When reporting commits in chat, render the commit subject as a Markdown link to the commit URL, for example `[docs（delivery）：完善交付文档与部署自动化](https://github.com/Toukou-Yuu/embedding-api/commit/<sha>)`.
+
 ## Commands
 
 - `pytest`

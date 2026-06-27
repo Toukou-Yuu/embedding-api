@@ -33,6 +33,23 @@ ruff check .
 python -m compileall app
 ```
 
+## Windows port exclusions
+
+On Windows, a port can be unavailable even when no process is listening if it
+falls inside a system excluded port range. Check excluded TCP ports with:
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+If `8100` is excluded, run the local server on a different host port:
+
+```powershell
+$env:EMBEDDING_BACKEND = "fake"
+uvicorn app.main:app --reload --host 127.0.0.1 --port 18100
+python scripts\smoke_test.py --base-url http://127.0.0.1:18100
+```
+
 The optional real-model test intentionally requires an explicit opt-in:
 
 ```bash

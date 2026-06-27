@@ -65,6 +65,17 @@ python -m compileall app
 python scripts/smoke_test.py --base-url http://127.0.0.1:8100
 ```
 
+On Windows, port `8100` can be unavailable even when no process is listening if it
+falls inside a system excluded port range. Check with:
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+If `8100` is excluded, keep the container listening on `8100` and map a different
+host port, for example `-p 18100:8100`, then use
+`http://127.0.0.1:18100` as the local base URL.
+
 Default tests use the fake backend and do not download BGE-M3. To explicitly run the real-model test:
 
 ```bash
@@ -85,6 +96,8 @@ docker run --rm -p 8100:8100 \
 ```
 
 The image never includes model weights. The first successful runtime load stores weights in the mounted `/models` volume. See [docs/deployment.md](docs/deployment.md).
+
+For NVIDIA GPU deployment and preflight checks, see [docs/gpu-deployment.md](docs/gpu-deployment.md).
 
 ## Environment variables
 
